@@ -47,8 +47,21 @@ void DataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
       << top[0]->channels() << "," << top[0]->height() << ","
       << top[0]->width();
   // label
-  if (this->output_labels_) {
+  /*if (this->output_labels_) {
     vector<int> label_shape(1, batch_size);
+    top[1]->Reshape(label_shape);
+    for (int i = 0; i < this->prefetch_.size(); ++i) {
+      this->prefetch_[i]->label_.Reshape(label_shape);
+    }
+    }*/
+  const int labelNum = this->layer_param_.data_param().label_num(); 
+  if (this->output_labels_) {
+ 
+    vector<int> label_shape;
+    label_shape.push_back(batch_size);
+    label_shape.push_back(labelNum);
+    label_shape.push_back(1);
+    label_shape.push_back(1);
     top[1]->Reshape(label_shape);
     for (int i = 0; i < this->prefetch_.size(); ++i) {
       this->prefetch_[i]->label_.Reshape(label_shape);
@@ -116,10 +129,19 @@ void DataLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
     this->transformed_data_.set_cpu_data(top_data + offset);
     this->data_transformer_->Transform(datum, &(this->transformed_data_));
     // Copy label.
-    if (this->output_labels_) {
+    /*if (this->output_labels_) {
       Dtype* top_label = batch->label_.mutable_cpu_data();
       top_label[item_id] = datum.label();
+      }*/
+
+    const int labelNum = this->layer_param_.data_param().label_num(); 
+    if (this->output_labels_) {
+      Dtype* top_label = batch->label_.mutable_cpu_data();
+      for(int i=0;i<labelNum;i++){
+        top_label[item_id*labelNum+i] = datum.float_data(i); //read float labels
+      }
     }
+    
     trans_time += timer.MicroSeconds();
     Next();
   }
